@@ -1,4 +1,4 @@
-# TeamSync – B2B Team Project Management SaaS
+# CollabHub – B2B Team Project Management SaaS
 
 TeamSync is a full-stack B2B SaaS application designed to help teams manage projects, tasks, members, and workspaces efficiently in real time.
 
