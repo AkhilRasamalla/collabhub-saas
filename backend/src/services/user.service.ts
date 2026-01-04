@@ -2,9 +2,6 @@ import UserModel from "../models/user.model";
 import bcrypt from "bcrypt";
 import { BadRequestException } from "../utils/appError";
 
-/**
- * LOGIN / LOCAL AUTH
- */
 export const verifyUserService = async ({
   email,
   password,
@@ -19,7 +16,6 @@ export const verifyUserService = async ({
   }
 
   const isMatch = await bcrypt.compare(password, user.password);
-
   if (!isMatch) {
     throw new BadRequestException("Invalid email or password");
   }
@@ -27,9 +23,6 @@ export const verifyUserService = async ({
   return user;
 };
 
-/**
- * GET CURRENT USER
- */
 export const getCurrentUserService = async (userId: string) => {
   const user = await UserModel.findById(userId)
     .populate("currentWorkspace")
