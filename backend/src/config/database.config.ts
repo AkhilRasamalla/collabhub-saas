@@ -2,15 +2,11 @@ import mongoose from "mongoose";
 import { config } from "./app.config";
 
 export async function connectDatabase(): Promise<void> {
-  try {
-    if (!config.MONGO_URI) {
-      throw new Error("MONGO_URI is not defined");
-    }
-
-    await mongoose.connect(config.MONGO_URI);
-    console.log("Connected to Mongo database");
-  } catch (error) {
-    console.error("Error connecting to Mongo database");
-    throw error;
+  if (!config.MONGO_URI) {
+    console.warn("MongoDB URI missing");
+    return;
   }
+
+  await mongoose.connect(config.MONGO_URI);
+  console.log("Connected to Mongo database");
 }
