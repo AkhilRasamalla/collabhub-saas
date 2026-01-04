@@ -24,7 +24,7 @@
     "uuid": "^11.0.3",
     "zod": "^3.24.1"
   },
-  "devDependencies": {
+  "Dependencies": {
     "@types/bcrypt": "^5.0.2",
     "@types/cookie-session": "^2.0.49",
     "@types/cors": "^2.8.19",
