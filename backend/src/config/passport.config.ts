@@ -1,18 +1,16 @@
 import passport from "passport";
-import { Request } from "express";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { Strategy as LocalStrategy } from "passport-local";
+import { Request } from "express";
 
 import { config } from "./app.config";
-import { NotFoundException } from "../utils/appError";
+import { loginOrCreateAccountService } from "../services/auth.service";
 import { ProviderEnum } from "../enums/account-provider.enum";
-import {
-  loginOrCreateAccountService,
-  verifyUserService,
-} from "../services/auth.service";
+import { NotFoundException, BadRequestException } from "../utils/appError";
+import UserModel from "../models/user.model";
 
 /**
- * GOOGLE STRATEGY — ONLY REGISTER IF CREDS EXIST
+ * GOOGLE STRATEGY — ENABLE ONLY IF CREDS EXIST
  */
 if (
   config.GOOGLE_CLIENT_ID &&
@@ -32,8 +30,8 @@ if (
         try {
           const { email, sub: googleId, picture } = profile._json as any;
 
-          if (!googleId) {
-            throw new NotFoundException("Google ID missing");
+          if (!googleId || !email) {
+            throw new NotFoundException("Google profile incomplete");
           }
 
           const { user } = await loginOrCreateAccountService({
@@ -46,7 +44,7 @@ if (
 
           done(null, user);
         } catch (error) {
-          done(error, false);
+          done(error as any, false);
         }
       }
     )
@@ -56,7 +54,7 @@ if (
 }
 
 /**
- * LOCAL STRATEGY — ALWAYS ENABLED
+ * LOCAL STRATEGY — EMAIL + PASSWORD
  */
 passport.use(
   new LocalStrategy(
@@ -67,10 +65,22 @@ passport.use(
     },
     async (email, password, done) => {
       try {
-        const user = await verifyUserService({ email, password });
+        const user = await UserModel.findOne({ email }).select("+password");
+
+        if (!user) {
+          throw new BadRequestException("Invalid email or password");
+        }
+
+        const isMatch = await user.comparePassword(password);
+
+        if (!isMatch) {
+          throw new BadRequestException("Invalid email or password");
+        }
+
+        user.password = undefined as any;
         done(null, user);
-      } catch (error: any) {
-        done(error, false, { message: error?.message });
+      } catch (error) {
+        done(error as any, false);
       }
     }
   )
@@ -78,3 +88,5 @@ passport.use(
 
 passport.serializeUser((user: any, done) => done(null, user));
 passport.deserializeUser((user: any, done) => done(null, user));
+
+export default passport;
