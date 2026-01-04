@@ -4,17 +4,13 @@ import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { Strategy as LocalStrategy } from "passport-local";
 
 import { config } from "./app.config";
-import { NotFoundException } from "../utils/appError";
 import { ProviderEnum } from "../enums/account-provider.enum";
 import {
   loginOrCreateAccountService,
   verifyUserService,
 } from "../services/auth.service";
 
-/**
- * GOOGLE STRATEGY
- * Only enable if credentials exist
- */
+// ✅ Guard Google OAuth – only register if credentials exist
 if (config.GOOGLE_CLIENT_ID && config.GOOGLE_CLIENT_SECRET) {
   passport.use(
     new GoogleStrategy(
@@ -28,10 +24,6 @@ if (config.GOOGLE_CLIENT_ID && config.GOOGLE_CLIENT_SECRET) {
       async (req: Request, accessToken, refreshToken, profile, done) => {
         try {
           const { email, sub: googleId, picture } = profile._json as any;
-
-          if (!googleId) {
-            throw new NotFoundException("Google ID is missing");
-          }
 
           const { user } = await loginOrCreateAccountService({
             provider: ProviderEnum.GOOGLE,
@@ -50,9 +42,7 @@ if (config.GOOGLE_CLIENT_ID && config.GOOGLE_CLIENT_SECRET) {
   );
 }
 
-/**
- * LOCAL STRATEGY
- */
+// ✅ Local strategy always enabled
 passport.use(
   new LocalStrategy(
     {
