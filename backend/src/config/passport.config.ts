@@ -11,39 +11,48 @@ import {
   verifyUserService,
 } from "../services/auth.service";
 
-passport.use(
-  new GoogleStrategy(
-    {
-      clientID: config.GOOGLE_CLIENT_ID,
-      clientSecret: config.GOOGLE_CLIENT_SECRET,
-      callbackURL: config.GOOGLE_CALLBACK_URL,
-      scope: ["profile", "email"],
-      passReqToCallback: true,
-    },
-    async (req: Request, accessToken, refreshToken, profile, done) => {
-      try {
-        const { email, sub: googleId, picture } = profile._json;
-        console.log(profile, "profile");
-        console.log(googleId, "googleId");
-        if (!googleId) {
-          throw new NotFoundException("Google ID (sub) is missing");
+/**
+ * GOOGLE STRATEGY
+ * Only enable if credentials exist
+ */
+if (config.GOOGLE_CLIENT_ID && config.GOOGLE_CLIENT_SECRET) {
+  passport.use(
+    new GoogleStrategy(
+      {
+        clientID: config.GOOGLE_CLIENT_ID,
+        clientSecret: config.GOOGLE_CLIENT_SECRET,
+        callbackURL: config.GOOGLE_CALLBACK_URL,
+        scope: ["profile", "email"],
+        passReqToCallback: true,
+      },
+      async (req: Request, accessToken, refreshToken, profile, done) => {
+        try {
+          const { email, sub: googleId, picture } = profile._json as any;
+
+          if (!googleId) {
+            throw new NotFoundException("Google ID is missing");
+          }
+
+          const { user } = await loginOrCreateAccountService({
+            provider: ProviderEnum.GOOGLE,
+            displayName: profile.displayName,
+            providerId: googleId,
+            picture,
+            email,
+          });
+
+          done(null, user);
+        } catch (error) {
+          done(error, false);
         }
-
-        const { user } = await loginOrCreateAccountService({
-          provider: ProviderEnum.GOOGLE,
-          displayName: profile.displayName,
-          providerId: googleId,
-          picture: picture,
-          email: email,
-        });
-        done(null, user);
-      } catch (error) {
-        done(error, false);
       }
-    }
-  )
-);
+    )
+  );
+}
 
+/**
+ * LOCAL STRATEGY
+ */
 passport.use(
   new LocalStrategy(
     {
