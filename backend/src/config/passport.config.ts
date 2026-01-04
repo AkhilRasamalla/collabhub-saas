@@ -5,12 +5,12 @@ import { Request } from "express";
 
 import { config } from "./app.config";
 import { loginOrCreateAccountService } from "../services/auth.service";
+import { verifyUserService } from "../services/user.service";
 import { ProviderEnum } from "../enums/account-provider.enum";
-import { NotFoundException, BadRequestException } from "../utils/appError";
-import UserModel from "../models/user.model";
+import { NotFoundException } from "../utils/appError";
 
 /**
- * GOOGLE STRATEGY — ENABLE ONLY IF CREDS EXIST
+ * GOOGLE STRATEGY — only if creds exist
  */
 if (
   config.GOOGLE_CLIENT_ID &&
@@ -30,8 +30,8 @@ if (
         try {
           const { email, sub: googleId, picture } = profile._json as any;
 
-          if (!googleId || !email) {
-            throw new NotFoundException("Google profile incomplete");
+          if (!googleId) {
+            throw new NotFoundException("Google ID missing");
           }
 
           const { user } = await loginOrCreateAccountService({
@@ -54,33 +54,17 @@ if (
 }
 
 /**
- * LOCAL STRATEGY — EMAIL + PASSWORD
+ * LOCAL STRATEGY — always enabled
  */
 passport.use(
   new LocalStrategy(
-    {
-      usernameField: "email",
-      passwordField: "password",
-      session: true,
-    },
+    { usernameField: "email", passwordField: "password", session: true },
     async (email, password, done) => {
       try {
-        const user = await UserModel.findOne({ email }).select("+password");
-
-        if (!user) {
-          throw new BadRequestException("Invalid email or password");
-        }
-
-        const isMatch = await user.comparePassword(password);
-
-        if (!isMatch) {
-          throw new BadRequestException("Invalid email or password");
-        }
-
-        user.password = undefined as any;
+        const user = await verifyUserService({ email, password });
         done(null, user);
-      } catch (error) {
-        done(error as any, false);
+      } catch (error: any) {
+        done(error, false);
       }
     }
   )
