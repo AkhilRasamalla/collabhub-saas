@@ -20,6 +20,7 @@ const badgeVariants = cva(
         [TaskStatusEnum.DONE]: "bg-green-100 text-green-600",
 
         // Priority
+        // Priority
         [TaskPriorityEnum.HIGH]: "bg-red-100 text-red-600",
         [TaskPriorityEnum.MEDIUM]: "bg-yellow-100 text-yellow-600",
         [TaskPriorityEnum.LOW]: "bg-gray-100 text-gray-600",
