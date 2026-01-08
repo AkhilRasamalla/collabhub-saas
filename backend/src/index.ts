@@ -21,7 +21,12 @@ import isAuthenticated from "./middlewares/isAuthenticated.middleware";
 const app = express();
 
 /* =======================
-   1️⃣ CORS (FIXED)
+   0️⃣ TRUST PROXY (RENDER)
+   ======================= */
+app.set("trust proxy", 1);
+
+/* =======================
+   1️⃣ CORS
    ======================= */
 app.use(
   cors({
@@ -40,18 +45,18 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 /* =======================
-   3️⃣ SESSION (CORRECT)
+   3️⃣ SESSION
    ======================= */
 app.use(
   session({
     name: "collabhub.sid",
-    secret: config.SESSION_SECRET!, // must exist
+    secret: config.SESSION_SECRET!,
     resave: false,
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: false,        // 🔴 MUST be false for localhost
-      sameSite: "lax",      // 🔴 MUST be lax for localhost
+      secure: config.NODE_ENV === "production",
+      sameSite: config.NODE_ENV === "production" ? "none" : "lax",
       maxAge: 24 * 60 * 60 * 1000,
     },
   })
@@ -79,7 +84,7 @@ app.use("/api/task", isAuthenticated, taskRoutes);
 app.use(errorHandler);
 
 /* =======================
-   7️⃣ START SERVER (FIXED)
+   7️⃣ START SERVER
    ======================= */
 (async () => {
   try {
