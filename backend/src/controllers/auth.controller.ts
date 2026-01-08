@@ -74,16 +74,24 @@ export const logOutController = asyncHandler(
   async (req: Request, res: Response) => {
     req.logout((err) => {
       if (err) {
-        console.error("Logout error:", err);
         return res
           .status(HTTPSTATUS.INTERNAL_SERVER_ERROR)
-          .json({ error: "Failed to log out" });
+          .json({ message: "Failed to log out" });
       }
-    });
 
-    req.session = null;
-    return res
-      .status(HTTPSTATUS.OK)
-      .json({ message: "Logged out successfully" });
+      req.session.destroy((err) => {
+        if (err) {
+          return res
+            .status(HTTPSTATUS.INTERNAL_SERVER_ERROR)
+            .json({ message: "Failed to destroy session" });
+        }
+
+        res.clearCookie("collabhub.sid");
+
+        return res.status(HTTPSTATUS.OK).json({
+          message: "Logged out successfully",
+        });
+      });
+    });
   }
 );

@@ -1,7 +1,7 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
-import session from "cookie-session";
+import session from "express-session";
 import passport from "passport";
 
 import { config } from "./config/app.config";
@@ -21,11 +21,11 @@ import isAuthenticated from "./middlewares/isAuthenticated.middleware";
 const app = express();
 
 /* =======================
-   1️⃣ CORS — MUST BE FIRST
+   1️⃣ CORS (FIXED)
    ======================= */
 app.use(
   cors({
-    origin: config.FRONTEND_ORIGIN, // https://collabhub-saas-1.onrender.com
+    origin: config.FRONTEND_ORIGIN,
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -40,16 +40,20 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 /* =======================
-   3️⃣ SESSION (CROSS-DOMAIN SAFE)
+   3️⃣ SESSION (CORRECT)
    ======================= */
 app.use(
   session({
-    name: "session",
-    keys: [config.SESSION_SECRET!],
-    maxAge: 24 * 60 * 60 * 1000,
-    httpOnly: true,
-    secure: true,      // REQUIRED on Render (HTTPS)
-    sameSite: "none",  // REQUIRED for cross-domain cookies
+    name: "collabhub.sid",
+    secret: config.SESSION_SECRET!, // must exist
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      httpOnly: true,
+      secure: false,        // 🔴 MUST be false for localhost
+      sameSite: "lax",      // 🔴 MUST be lax for localhost
+      maxAge: 24 * 60 * 60 * 1000,
+    },
   })
 );
 
@@ -75,9 +79,16 @@ app.use("/api/task", isAuthenticated, taskRoutes);
 app.use(errorHandler);
 
 /* =======================
-   7️⃣ START SERVER
+   7️⃣ START SERVER (FIXED)
    ======================= */
-app.listen(config.PORT, async () => {
-  console.log(`Server running on port ${config.PORT}`);
-  await connectDatabase();
-});
+(async () => {
+  try {
+    await connectDatabase();
+    app.listen(config.PORT, () => {
+      console.log(`✅ Server running on port ${config.PORT}`);
+    });
+  } catch (err) {
+    console.error("❌ Failed to start server", err);
+    process.exit(1);
+  }
+})();

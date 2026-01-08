@@ -1,33 +1,19 @@
-import { CustomError } from "@/types/custom-error.type";
 import axios from "axios";
 
-const baseURL = import.meta.env.VITE_API_BASE_URL;
-
-const options = {
-  baseURL,
+const API = axios.create({
+  baseURL: import.meta.env.VITE_API_BASE_URL + "/api",
   withCredentials: true,
-  timeout: 10000,
-};
-
-const API = axios.create(options);
+});
 
 API.interceptors.response.use(
-  (response) => {
-    return response;
-  },
-  async (error) => {
-    const { data, status } = error.response;
-
-    if (data === "Unauthorized" && status === 401) {
-      window.location.href = "/";
+  (response) => response,
+  (error) => {
+    if (!error.response) {
+      return Promise.reject({
+        message: "Server not reachable. Is backend running?",
+      });
     }
-
-    const customError: CustomError = {
-      ...error,
-      errorCode: data?.errorCode || "UNKNOWN_ERROR",
-    };
-
-    return Promise.reject(customError);
+    return Promise.reject(error);
   }
 );
 
