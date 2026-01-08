@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 import session from "express-session";
 import passport from "passport";
+import path from "path";
 
 import { config } from "./config/app.config";
 import { connectDatabase } from "./config/database.config";
@@ -69,7 +70,16 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 /* =======================
-   5️⃣ ROUTES
+   5️⃣ SERVE FRONTEND
+   ======================= */
+const __dirname = path.resolve();
+
+app.use(
+  express.static(path.join(__dirname, "../client/dist"))
+);
+
+/* =======================
+   6️⃣ API ROUTES
    ======================= */
 app.use("/api/auth", authRoutes);
 app.use("/api/user", isAuthenticated, userRoutes);
@@ -79,12 +89,21 @@ app.use("/api/project", isAuthenticated, projectRoutes);
 app.use("/api/task", isAuthenticated, taskRoutes);
 
 /* =======================
-   6️⃣ ERROR HANDLER
+   7️⃣ SPA FALLBACK (CRITICAL)
+   ======================= */
+app.get("*", (req, res) => {
+  res.sendFile(
+    path.join(__dirname, "../client/dist/index.html")
+  );
+});
+
+/* =======================
+   8️⃣ ERROR HANDLER
    ======================= */
 app.use(errorHandler);
 
 /* =======================
-   7️⃣ START SERVER
+   9️⃣ START SERVER
    ======================= */
 (async () => {
   try {
