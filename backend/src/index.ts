@@ -72,8 +72,11 @@ app.use(passport.session());
 /* =======================
    5️⃣ SERVE FRONTEND
    ======================= */
-const __dirname = path.resolve();
-
+/**
+ * IMPORTANT:
+ * In CommonJS, __dirname already exists.
+ * DO NOT redeclare it.
+ */
 app.use(
   express.static(path.join(__dirname, "../client/dist"))
 );
