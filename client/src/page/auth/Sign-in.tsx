@@ -25,12 +25,15 @@ import { useMutation } from "@tanstack/react-query";
 import { loginMutationFn } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
 import { Loader } from "lucide-react";
+import { useAuthContext } from "@/context/auth-provider";
+
 
 const SignIn = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const returnUrl = searchParams.get("returnUrl");
 
+  const { refetchAuth } = useAuthContext();
   const { mutate, isPending } = useMutation({
     mutationFn: loginMutationFn,
   });
@@ -54,7 +57,10 @@ const SignIn = () => {
     if (isPending) return;
 
     mutate(values, {
-      onSuccess: (data) => {
+      onSuccess: async (data) => {
+        // 🔥 CRITICAL FIX — sync session with app state
+        await refetchAuth();
+
         const user = data.user;
         const decodedUrl = returnUrl ? decodeURIComponent(returnUrl) : null;
         navigate(decodedUrl || `/workspace/${user.currentWorkspace}`);

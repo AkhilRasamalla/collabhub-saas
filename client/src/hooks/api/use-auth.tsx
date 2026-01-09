@@ -5,9 +5,11 @@ const useAuth = () => {
   const query = useQuery({
     queryKey: ["authUser"],
     queryFn: getCurrentUserQueryFn,
+    enabled: false,            // ❗ DO NOT auto-run
+    retry: false,              // ❗ stop 401 loop
     staleTime: 0,
-    retry: 2,
   });
+
   return query;
 };
 
