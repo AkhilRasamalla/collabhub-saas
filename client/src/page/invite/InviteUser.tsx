@@ -1,4 +1,3 @@
-
 import { Loader } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
@@ -21,10 +20,10 @@ const InviteUser = () => {
 
   const { inviteCode } = useParams<{ inviteCode: string }>();
 
-  const { data: authData, isPending } = useAuth();
+  const { data: authData, isLoading: authLoading } = useAuth();
   const user = authData?.user;
 
-  const { mutate, isPending: isLoading } = useMutation<
+  const { mutate, isPending: joinLoading } = useMutation<
     { workspaceId: string },
     Error,
     string
@@ -32,7 +31,9 @@ const InviteUser = () => {
     mutationFn: invitedUserJoinWorkspaceMutationFn,
   });
 
-  const returnUrl = encodeURIComponent(`/invite/${inviteCode}`);
+  const returnUrl = encodeURIComponent(
+    `/invite/workspace/${inviteCode}/join`
+  );
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,20 +41,16 @@ const InviteUser = () => {
 
     mutate(inviteCode, {
       onSuccess: (data) => {
-        queryClient.invalidateQueries({
-          queryKey: ["userWorkspaces"],
-        });
+        queryClient.invalidateQueries({ queryKey: ["userWorkspaces"] });
         navigate(`/workspace/${data.workspaceId}`);
       },
       onError: (error: any) => {
-        const message =
-          error?.response?.data?.message ||
-          error?.message ||
-          "Failed to join workspace";
-
         toast({
           title: "Error",
-          description: message,
+          description:
+            error?.response?.data?.message ||
+            error?.message ||
+            "Failed to join workspace",
           variant: "destructive",
         });
       },
@@ -79,14 +76,14 @@ const InviteUser = () => {
           </CardHeader>
 
           <CardContent>
-            {isPending ? (
+            {authLoading ? (
               <div className="flex justify-center">
                 <Loader className="h-8 w-8 animate-spin" />
               </div>
             ) : user ? (
               <form onSubmit={handleSubmit} className="flex justify-center">
-                <Button type="submit" disabled={isLoading}>
-                  {isLoading && (
+                <Button type="submit" disabled={joinLoading}>
+                  {joinLoading && (
                     <Loader className="mr-2 h-4 w-4 animate-spin" />
                   )}
                   Join Workspace
@@ -97,7 +94,7 @@ const InviteUser = () => {
                 <Link to={`/sign-up?returnUrl=${returnUrl}`}>
                   <Button className="w-full">Signup</Button>
                 </Link>
-                <Link to={`/?returnUrl=${returnUrl}`}>
+                <Link to={`/sign-in?returnUrl=${returnUrl}`}>
                   <Button variant="secondary" className="w-full">
                     Login
                   </Button>
@@ -111,4 +108,4 @@ const InviteUser = () => {
   );
 };
 
-export default InviteUser
+export default InviteUser;
