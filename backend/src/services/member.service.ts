@@ -1,91 +1,37 @@
 import mongoose from "mongoose";
-import { ErrorCodeEnum } from "../enums/error-code.enum";
-import { Roles } from "../enums/role.enum";
 import MemberModel from "../models/member.model";
-import RoleModel from "../models/roles-permission.model";
 import WorkspaceModel from "../models/workspace.model";
-import UserModel from "../models/user.model";
+import RoleModel from "../models/roles-permission.model";
+import { Roles } from "../enums/role.enum";
 import {
   BadRequestException,
   NotFoundException,
-  UnauthorizedException,
 } from "../utils/appError";
 
-/* ===============================
-   GET MEMBER ROLE IN WORKSPACE
-   =============================== */
-export const getMemberRoleInWorkspace = async (
-  userId: string,
-  workspaceId: string
-) => {
-  const workspace = await WorkspaceModel.findById(workspaceId);
-  if (!workspace) {
-    throw new NotFoundException("Workspace not found");
-  }
-
-  const member = await MemberModel.findOne({
-    userId,
-    workspaceId,
-  }).populate("role");
-
-  if (!member) {
-    throw new UnauthorizedException(
-      "You are not a member of this workspace",
-      ErrorCodeEnum.ACCESS_UNAUTHORIZED
-    );
-  }
-
-  return { role: member.role?.name };
-};
-
-/* ===============================
-   JOIN WORKSPACE BY INVITE
-   =============================== */
 export const joinWorkspaceByInviteService = async (
-  userId: string,
+  userId: mongoose.Types.ObjectId,
   inviteCode: string
 ) => {
-  // 1️⃣ Find workspace by invite code
-  const workspace = await WorkspaceModel.findOne({ inviteCode }).exec();
-  if (!workspace) {
-    throw new NotFoundException("Invalid invite code or workspace not found");
-  }
+  const workspace = await WorkspaceModel.findOne({ inviteCode });
+  if (!workspace) throw new NotFoundException("Invalid invite link");
 
-  // 2️⃣ Check if already a member
-  const existingMember = await MemberModel.findOne({
+  const exists = await MemberModel.findOne({
     userId,
     workspaceId: workspace._id,
-  }).exec();
+  });
 
-  if (existingMember) {
-    throw new BadRequestException("You are already a member of this workspace");
+  if (exists) {
+    return { workspaceId: workspace._id };
   }
 
-  // 3️⃣ Get MEMBER role
   const role = await RoleModel.findOne({ name: Roles.MEMBER });
-  if (!role) {
-    throw new NotFoundException("Role not found");
-  }
+  if (!role) throw new NotFoundException("Role not found");
 
-  // 4️⃣ Add member
   await new MemberModel({
     userId,
     workspaceId: workspace._id,
     role: role._id,
-    joinedAt: new Date(),
   }).save();
 
-  // 5️⃣ Set user's current workspace (CRITICAL)
-  const user = await UserModel.findById(userId);
-  if (!user) {
-    throw new NotFoundException("User not found");
-  }
-
-  user.currentWorkspace = workspace._id as mongoose.Types.ObjectId;
-  await user.save();
-
-  return {
-    workspaceId: workspace._id,
-    role: role.name,
-  };
+  return { workspaceId: workspace._id };
 };
