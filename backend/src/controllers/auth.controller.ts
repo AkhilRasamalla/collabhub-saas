@@ -6,6 +6,8 @@ import { HTTPSTATUS } from "../config/http.config";
 import { registerUserService } from "../services/auth.service";
 import passport from "passport";
 
+/* ================= GOOGLE LOGIN CALLBACK ================= */
+
 export const googleLoginCallback = asyncHandler(
   async (req: Request, res: Response) => {
     const currentWorkspace = req.user?.currentWorkspace;
@@ -22,19 +24,28 @@ export const googleLoginCallback = asyncHandler(
   }
 );
 
+/* ================= REGISTER (AUTO LOGIN FIX) ================= */
+
 export const registerUserController = asyncHandler(
-  async (req: Request, res: Response) => {
-    const body = registerSchema.parse({
-      ...req.body,
-    });
+  async (req: Request, res: Response, next: NextFunction) => {
+    const body = registerSchema.parse(req.body);
 
-    await registerUserService(body);
+    // create user
+    const user = await registerUserService(body);
 
-    return res.status(HTTPSTATUS.CREATED).json({
-      message: "User created successfully",
+    // ✅ AUTO LOGIN AFTER SIGNUP
+    req.login(user, (err) => {
+      if (err) return next(err);
+
+      return res.status(HTTPSTATUS.CREATED).json({
+        message: "User created and logged in successfully",
+        user,
+      });
     });
   }
 );
+
+/* ================= LOGIN ================= */
 
 export const loginController = asyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -45,9 +56,7 @@ export const loginController = asyncHandler(
         user: Express.User | false,
         info: { message: string } | undefined
       ) => {
-        if (err) {
-          return next(err);
-        }
+        if (err) return next(err);
 
         if (!user) {
           return res.status(HTTPSTATUS.UNAUTHORIZED).json({
@@ -56,9 +65,7 @@ export const loginController = asyncHandler(
         }
 
         req.logIn(user, (err) => {
-          if (err) {
-            return next(err);
-          }
+          if (err) return next(err);
 
           return res.status(HTTPSTATUS.OK).json({
             message: "Logged in successfully",
@@ -70,26 +77,29 @@ export const loginController = asyncHandler(
   }
 );
 
+/* ================= LOGOUT (FULL FIX) ================= */
+
 export const logOutController = asyncHandler(
-  async (req: Request, res: Response, next: NextFunction) => {
-    req.logout((err) => {
-      if (err) {
-        return next(err);
-      }
+  async (req: Request, res: Response) => {
+    req.logout(() => {
+      if (req.session) {
+        req.session.destroy(() => {
+          res.clearCookie("collabhub.sid", {
+            path: "/",
+            httpOnly: true,
+            secure: config.NODE_ENV === "production",
+            sameSite: config.NODE_ENV === "production" ? "none" : "lax",
+          });
 
-      if (!req.session) {
-        return next(new Error("Session not initialized"));
-      }
-
-      req.session.save((err: Error | null) => {
-        if (err) {
-          return next(err);
-        }
-
+          return res.status(HTTPSTATUS.OK).json({
+            message: "Logged out successfully",
+          });
+        });
+      } else {
         return res.status(HTTPSTATUS.OK).json({
           message: "Logged out successfully",
         });
-      });
+      }
     });
   }
 );
